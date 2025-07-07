@@ -121,7 +121,7 @@ ftn:   # BUILDTARGET Cray compilers
 	"OPENACC = $(OPENACC)" \
 	"CPPFLAGS = $(MODEL_FORMULATION) -D_MPI" )
 
-ftn-wocss2:   # wcoss2
+ftn-wcoss2:   # wcoss2
 	( $(MAKE) all \
 	"FC_PARALLEL = ftn" \
 	"CC_PARALLEL = cc" \
