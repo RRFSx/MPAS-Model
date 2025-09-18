@@ -8,7 +8,7 @@
 module mpas_io_streams
 
 #define COMMA ,
-#define STREAM_DEBUG_WRITE(M) call mpas_log_write(M)
+#define STREAM_DEBUG_WRITE(M) ! call mpas_log_write(M)
 
 #ifdef SINGLE_PRECISION
 #define REAL_IO_TYPE MPAS_IO_REAL
@@ -23,6 +23,8 @@ module mpas_io_streams
    use mpas_timekeeping
    use mpas_io
    use mpas_log
+
+   public MPAS_checkStreamAtt
 
    interface MPAS_streamAddField
       module procedure MPAS_streamAddField_0dInteger
@@ -3337,8 +3339,11 @@ module mpas_io_streams
 
 !call mpas_log_write('Copying field from first block')
             int0d_temp = field_cursor % int0dField % scalar
-
 !call mpas_log_write('MGD calling MPAS_io_put_var now...')
+            if(.not. MPAS_io_field_is_defined(stream % fileHandle, field_cursor % int0dField % fieldName, io_err)) then
+               STREAM_DEBUG_WRITE( 'Skipping undefined field "' // trim(field_cursor % int0dField % fieldName)//'" in stream.')
+               cycle
+            endif
             call MPAS_io_put_var(stream % fileHandle, field_cursor % int0dField % fieldName, int0d_temp, io_err)
             call MPAS_io_err_mesg(stream % fileHandle % ioContext, io_err, .false.)
             if (io_err /= MPAS_IO_NOERR .and. present(ierr)) ierr = MPAS_IO_ERR
@@ -3393,9 +3398,18 @@ module mpas_io_streams
                end if
 
                if (field_cursor % int1dField % isVarArray) then
+                  if(.not. MPAS_io_field_is_defined(stream % fileHandle, field_cursor % int1dField % fieldName, io_err)) then
+                     STREAM_DEBUG_WRITE( 'Skipping undefined field "' // trim(field_cursor % int1dField % fieldName)//'" in stream.')
+                     cycle
+                  endif
                   call MPAS_io_put_var(stream % fileHandle, field_cursor % int1dField % constituentNames(j), int0d_temp, io_err)
                else
+                  if(.not. MPAS_io_field_is_defined(stream % fileHandle, field_cursor % int1dField % fieldName, io_err)) then
+                     STREAM_DEBUG_WRITE( 'Skipping undefined field "' // trim(field_cursor % int1dField % fieldName)//'" in stream.')
+                     cycle
+                  endif
                   call MPAS_io_put_var(stream % fileHandle, field_cursor % int1dField % fieldName, int1d_temp, io_err)
+
                end if
                call MPAS_io_err_mesg(stream % fileHandle % ioContext, io_err, .false.)
                if (io_err /= MPAS_IO_NOERR .and. present(ierr)) ierr = MPAS_IO_ERR
@@ -3456,9 +3470,19 @@ module mpas_io_streams
                end if
 
                if (field_cursor % int2dField % isVarArray) then
+                  if(.not. MPAS_io_field_is_defined(stream % fileHandle, field_cursor % int2dField % fieldName, io_err)) then
+                     STREAM_DEBUG_WRITE( 'Skipping undefined field "' // trim(field_cursor % int2dField % fieldName)//'" in stream.')
+                     cycle
+                  endif
                   call MPAS_io_put_var(stream % fileHandle, field_cursor % int2dField % constituentNames(j), int1d_temp, io_err)
+
                else
+                  if(.not. MPAS_io_field_is_defined(stream % fileHandle, field_cursor % int2dField % fieldName, io_err)) then
+                     STREAM_DEBUG_WRITE( 'Skipping undefined field "' // trim(field_cursor % int2dField % fieldName)//'" in stream.')
+                     cycle
+                  endif
                   call MPAS_io_put_var(stream % fileHandle, field_cursor % int2dField % fieldName, int2d_temp, io_err)
+
                end if
                call MPAS_io_err_mesg(stream % fileHandle % ioContext, io_err, .false.)
                if (io_err /= MPAS_IO_NOERR .and. present(ierr)) ierr = MPAS_IO_ERR
@@ -3523,8 +3547,16 @@ module mpas_io_streams
                end if
 
                if (field_cursor % int3dField % isVarArray) then
+                  if(.not. MPAS_io_field_is_defined(stream % fileHandle, field_cursor % int3dField % fieldName, io_err)) then
+                     STREAM_DEBUG_WRITE( 'Skipping undefined field "' // trim(field_cursor % int3dField % fieldName)//'" in stream.')
+                     cycle
+                  endif
                   call MPAS_io_put_var(stream % fileHandle, field_cursor % int3dField % constituentNames(j), int2d_temp, io_err)
                else
+                  if(.not. MPAS_io_field_is_defined(stream % fileHandle, field_cursor % int3dField % fieldName, io_err)) then
+                     STREAM_DEBUG_WRITE( 'Skipping undefined field "' // trim(field_cursor % int3dField % fieldName)//'" in stream.')
+                     cycle
+                  endif
                   call MPAS_io_put_var(stream % fileHandle, field_cursor % int3dField % fieldName, int3d_temp, io_err)
                end if
                call MPAS_io_err_mesg(stream % fileHandle % ioContext, io_err, .false.)
@@ -3547,6 +3579,10 @@ module mpas_io_streams
             real0d_temp = field_cursor % real0dField % scalar
 
 !call mpas_log_write('MGD calling MPAS_io_put_var now...')
+            if(.not. MPAS_io_field_is_defined(stream % fileHandle, field_cursor % real0dField % fieldName, io_err)) then
+               STREAM_DEBUG_WRITE( 'Skipping undefined field "' // trim(field_cursor % real0dField % fieldName)//'" in stream.')
+               cycle
+            endif
             call MPAS_io_put_var(stream % fileHandle, field_cursor % real0dField % fieldName, real0d_temp, io_err)
             call MPAS_io_err_mesg(stream % fileHandle % ioContext, io_err, .false.)
             if (io_err /= MPAS_IO_NOERR .and. present(ierr)) ierr = MPAS_IO_ERR
@@ -3601,9 +3637,19 @@ module mpas_io_streams
                end if
 
                if (field_cursor % real1dField % isVarArray) then
+                  if(.not. MPAS_io_field_is_defined(stream % fileHandle, field_cursor % real1dField % fieldName, io_err)) then
+                     STREAM_DEBUG_WRITE( 'Skipping undefined field "' // trim(field_cursor % real1dField % fieldName)//'" in stream.')
+                     cycle
+                  endif
                   call MPAS_io_put_var(stream % fileHandle, field_cursor % real1dField % constituentNames(j), real0d_temp, io_err)
+
                else
+                  if(.not. MPAS_io_field_is_defined(stream % fileHandle, field_cursor % real1dField % fieldName, io_err)) then
+                     STREAM_DEBUG_WRITE( 'Skipping undefined field "' // trim(field_cursor % real1dField % fieldName)//'" in stream.')
+                     cycle
+                  endif
                   call MPAS_io_put_var(stream % fileHandle, field_cursor % real1dField % fieldName, real1d_temp, io_err)
+
                end if
                call MPAS_io_err_mesg(stream % fileHandle % ioContext, io_err, .false.)
                if (io_err /= MPAS_IO_NOERR .and. present(ierr)) ierr = MPAS_IO_ERR
@@ -3664,9 +3710,19 @@ module mpas_io_streams
                end if
 
                if (field_cursor % real2dField % isVarArray) then
+                  if(.not. MPAS_io_field_is_defined(stream % fileHandle, field_cursor % real2dField % fieldName, io_err)) then
+                     STREAM_DEBUG_WRITE( 'Skipping undefined field "' // trim(field_cursor % real2dField % fieldName)//'" in stream.')
+                     cycle
+                  endif
                   call MPAS_io_put_var(stream % fileHandle, field_cursor % real2dField % constituentNames(j), real1d_temp, io_err)
+
                else
+                  if(.not. MPAS_io_field_is_defined(stream % fileHandle, field_cursor % real2dField % fieldName, io_err)) then
+                     STREAM_DEBUG_WRITE( 'Skipping undefined field "' // trim(field_cursor % real2dField % fieldName)//'" in stream.')
+                     cycle
+                  endif
                   call MPAS_io_put_var(stream % fileHandle, field_cursor % real2dField % fieldName, real2d_temp, io_err)
+
                end if
                call MPAS_io_err_mesg(stream % fileHandle % ioContext, io_err, .false.)
                if (io_err /= MPAS_IO_NOERR .and. present(ierr)) ierr = MPAS_IO_ERR
@@ -3731,9 +3787,19 @@ module mpas_io_streams
                end if
 
                if (field_cursor % real3dField % isVarArray) then
+                  if(.not. MPAS_io_field_is_defined(stream % fileHandle, field_cursor % real3dField % fieldName, io_err)) then
+                     STREAM_DEBUG_WRITE( 'Skipping undefined field "' // trim(field_cursor % real3dField % fieldName)//'" in stream.')
+                     cycle
+                  endif
                   call MPAS_io_put_var(stream % fileHandle, field_cursor % real3dField % constituentNames(j), real2d_temp, io_err)
+
                else
+                  if(.not. MPAS_io_field_is_defined(stream % fileHandle, field_cursor % real3dField % fieldName, io_err)) then
+                     STREAM_DEBUG_WRITE( 'Skipping undefined field "' // trim(field_cursor % real3dField % fieldName)//'" in stream.')
+                     cycle
+                  endif
                   call MPAS_io_put_var(stream % fileHandle, field_cursor % real3dField % fieldName, real3d_temp, io_err)
+
                end if
                call MPAS_io_err_mesg(stream % fileHandle % ioContext, io_err, .false.)
                if (io_err /= MPAS_IO_NOERR .and. present(ierr)) ierr = MPAS_IO_ERR
@@ -3800,9 +3866,19 @@ module mpas_io_streams
                end if
 
                if (field_cursor % real4dField % isVarArray) then
+                  if(.not. MPAS_io_field_is_defined(stream % fileHandle, field_cursor % real4dField % fieldName, io_err)) then
+                     STREAM_DEBUG_WRITE( 'Skipping undefined field "' // trim(field_cursor % real4dField % fieldName)//'" in stream.')
+                     cycle
+                  endif
                   call MPAS_io_put_var(stream % fileHandle, field_cursor % real4dField % constituentNames(j), real3d_temp, io_err)
+
                else
+                  if(.not. MPAS_io_field_is_defined(stream % fileHandle, field_cursor % real4dField % fieldName, io_err)) then
+                     STREAM_DEBUG_WRITE( 'Skipping undefined field "' // trim(field_cursor % real4dField % fieldName)//'" in stream.')
+                     cycle
+                  endif
                   call MPAS_io_put_var(stream % fileHandle, field_cursor % real4dField % fieldName, real4d_temp, io_err)
+
                end if
                call MPAS_io_err_mesg(stream % fileHandle % ioContext, io_err, .false.)
                if (io_err /= MPAS_IO_NOERR .and. present(ierr)) ierr = MPAS_IO_ERR
@@ -3871,9 +3947,19 @@ module mpas_io_streams
                end if
 
                if (field_cursor % real5dField % isVarArray) then
+                  if(.not. MPAS_io_field_is_defined(stream % fileHandle, field_cursor % real5dField % fieldName, io_err)) then
+                     STREAM_DEBUG_WRITE( 'Skipping undefined field "' // trim(field_cursor % real5dField % fieldName)//'" in stream.')
+                     cycle
+                  endif
                   call MPAS_io_put_var(stream % fileHandle, field_cursor % real5dField % constituentNames(j), real4d_temp, io_err)
+
                else
+                  if(.not. MPAS_io_field_is_defined(stream % fileHandle, field_cursor % real5dField % fieldName, io_err)) then
+                     STREAM_DEBUG_WRITE( 'Skipping undefined field "' // trim(field_cursor % real5dField % fieldName)//'" in stream.')
+                     cycle
+                  endif
                   call MPAS_io_put_var(stream % fileHandle, field_cursor % real5dField % fieldName, real5d_temp, io_err)
+
                end if
                call MPAS_io_err_mesg(stream % fileHandle % ioContext, io_err, .false.)
                if (io_err /= MPAS_IO_NOERR .and. present(ierr)) ierr = MPAS_IO_ERR
@@ -3893,7 +3979,12 @@ module mpas_io_streams
 
 !call mpas_log_write('Copying field from first block')
 !call mpas_log_write('MGD calling MPAS_io_put_var now...')
+            if(.not. MPAS_io_field_is_defined(stream % fileHandle, field_cursor % char0dField % fieldName, io_err)) then
+               STREAM_DEBUG_WRITE( 'Skipping undefined field "' // trim(field_cursor % char0dField % fieldName)//'" in stream.')
+               cycle
+            endif
             call MPAS_io_put_var(stream % fileHandle, field_cursor % char0dField % fieldName, field_cursor % char0dField % scalar, io_err)
+
             call MPAS_io_err_mesg(stream % fileHandle % ioContext, io_err, .false.)
             if (io_err /= MPAS_IO_NOERR .and. present(ierr)) ierr = MPAS_IO_ERR
 
@@ -3905,7 +3996,12 @@ module mpas_io_streams
 
 !call mpas_log_write('Copying field from first block')
 !call mpas_log_write('MGD calling MPAS_io_put_var now...')
+            if(.not. MPAS_io_field_is_defined(stream % fileHandle, field_cursor % char1dField % fieldName, io_err)) then
+               STREAM_DEBUG_WRITE( 'Skipping undefined field "' // trim(field_cursor % char1dField % fieldName)//'" in stream.')
+               cycle
+            endif
             call MPAS_io_put_var(stream % fileHandle, field_cursor % char1dField % fieldName, field_cursor % char1dField % array, io_err)
+
             call MPAS_io_err_mesg(stream % fileHandle % ioContext, io_err, .false.)
             if (io_err /= MPAS_IO_NOERR .and. present(ierr)) ierr = MPAS_IO_ERR
 
@@ -4079,6 +4175,36 @@ module mpas_io_streams
    end subroutine MPAS_readStreamAtt_text
 
 
+   logical function MPAS_checkStreamAtt(stream, attName, ierr)
+
+      implicit none
+
+      type (MPAS_Stream_type), intent(inout) :: stream
+      character (len=*), intent(in) :: attName
+      integer, intent(out), optional :: ierr
+
+      integer :: io_err
+
+      if (present(ierr)) ierr = MPAS_STREAM_NOERR
+      MPAS_checkStreamAtt = .false.
+
+      !
+      ! Sanity checks
+      !
+      if (.not. stream % isInitialized) then
+         if (present(ierr)) ierr = MPAS_STREAM_NOT_INITIALIZED
+         return
+      end if
+      call MPAS_io_has_att(stream % fileHandle, attName, ierr=io_err) 
+      if(io_err /= 0) then
+         return
+      endif
+
+      MPAS_checkStreamAtt = .true.
+
+   end function MPAS_checkStreamAtt
+
+
    subroutine MPAS_writeStreamAtt_0dInteger(stream, attName, attValue, syncVal, ierr)
 
       implicit none
@@ -4100,7 +4226,10 @@ module mpas_io_streams
          if (present(ierr)) ierr = MPAS_STREAM_NOT_INITIALIZED
          return
       end if
-
+      call MPAS_io_has_att(stream % fileHandle, attName, ierr=io_err) 
+      if(io_err /= 0) then
+         return
+      endif
       call MPAS_io_put_att(stream % fileHandle, attName, attValue, syncVal=syncVal, ierr=io_err) 
       call MPAS_io_err_mesg(stream % fileHandle % ioContext, io_err, .false.)
       if (io_err /= MPAS_IO_NOERR .and. present(ierr)) ierr = MPAS_IO_ERR
