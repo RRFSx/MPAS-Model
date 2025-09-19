@@ -6606,7 +6606,7 @@ module mpas_io
          case (MPAS_IO_ERR_UNDEFINED_DIM)
             call mpas_log_write('MPAS IO Error: Field uses undefined dimension', MPAS_LOG_ERR)
          case (MPAS_IO_ERR_UNDEFINED_VAR)
-            call mpas_log_write('MPAS IO Error: Undefined field', MPAS_LOG_ERR)
+            call mpas_log_write('MPAS IO Error: Undefined field', MPAS_LOG_WARN)
          case (MPAS_IO_ERR_REDEF_ATT)
             call mpas_log_write('MPAS IO Error: Inconsistent redefinition of attribute', MPAS_LOG_ERR)
          case (MPAS_IO_ERR_WRONG_ATT_TYPE)
