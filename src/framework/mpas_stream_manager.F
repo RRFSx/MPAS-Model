@@ -2915,6 +2915,7 @@ module mpas_stream_manager
         integer :: temp_ierr
         integer :: threadNum
         logical :: wroteStreams
+
         type (mpas_io_context_type), pointer :: debugContext, backupContext
 
         threadNum = mpas_threading_get_thread_num()
@@ -4251,72 +4252,52 @@ module mpas_stream_manager
             call mpas_pool_begin_iteration(stream % att_pool)
             do while (mpas_pool_get_next_member(stream % att_pool, itr))
                 if ( itr % memberType == MPAS_POOL_CONFIG) then
-                  STREAM_DEBUG_WRITE('Write attribute '//trim(itr%memberName))
-                  if(mpas_checkStreamAtt(stream % stream, itr % memberName, ierr=local_ierr)) then
                     if ( itr % dataType == MPAS_POOL_REAL ) then
-                        STREAM_DEBUG_WRITE('  real attribute mpas_pool_get_config')
                         call mpas_pool_get_config(stream % att_pool, itr % memberName, realAtt)
-                        STREAM_DEBUG_WRITE('  real attribute mpas_writeStreamAtt')
                         call mpas_writeStreamAtt(stream % stream, itr % memberName, realAtt, syncVal=.false., ierr=local_ierr)
                     else if ( itr % dataType == MPAS_POOL_INTEGER ) then
-                        STREAM_DEBUG_WRITE('  integer attribute mpas_pool_get_config')
                         call mpas_pool_get_config(stream % att_pool, itr % memberName, intAtt)
-                        STREAM_DEBUG_WRITE('  integer attribute mpas_writeStreamAtt')
                         call mpas_writeStreamAtt(stream % stream, itr % memberName, intAtt, syncVal=.false., ierr=local_ierr)
                     else if ( itr % dataType == MPAS_POOL_CHARACTER ) then
-                        STREAM_DEBUG_WRITE('  char attribute mpas_pool_get_config')
                         call mpas_pool_get_config(stream % att_pool, itr % memberName, charAtt)
-                        STREAM_DEBUG_WRITE('  char attribute mpas_writeStreamAtt')
                         call mpas_writeStreamAtt(stream % stream, itr % memberName, charAtt, syncVal=.false., ierr=local_ierr)
                     else if ( itr % dataType == MPAS_POOL_LOGICAL ) then
-                        STREAM_DEBUG_WRITE('  logical attribute mpas_pool_get_config')
                         call mpas_pool_get_config(stream % att_pool, itr % memberName, logAtt)
                         if (logAtt) then
-                            STREAM_DEBUG_WRITE('  logical attribute mpas_writeStreamAtt YES')
                             call mpas_writeStreamAtt(stream % stream, itr % memberName, 'YES', syncVal=.false., ierr=local_ierr)
                         else
-                            STREAM_DEBUG_WRITE('  logical attribute mpas_writeStreamAtt NO')
                             call mpas_writeStreamAtt(stream % stream, itr % memberName, 'NO', syncVal=.false., ierr=local_ierr)
                         end if
                     end if
 
                     if (local_ierr /= MPAS_STREAM_NOERR) then
-                        STREAM_DEBUG_WRITE('  failed to write attribute '//trim(itr%memberName))
                         ierr = MPAS_STREAM_MGR_ERROR
                         return
                     end if
-                    STREAM_DEBUG_WRITE('  done writing attribute '//trim(itr%memberName))
-                  else
-                    STREAM_DEBUG_WRITE('  skipping a missing attribute '//trim(itr%memberName))
-                  end if
                 end if
             end do
 
             !
             ! Generate file_id and write to stream
             !
-            if (mpas_checkStreamAtt(stream % stream, 'file_id', ierr=local_ierr)) then
-               call gen_random(idLength, c_file_id)
-               call mpas_c_to_f_string(c_file_id, f_file_id)
-               call mpas_writeStreamAtt(stream % stream, 'file_id', f_file_id, syncVal=.true., ierr=local_ierr)
-               if (local_ierr /= MPAS_STREAM_NOERR) then
-                  ierr = MPAS_STREAM_MGR_ERROR
-                  return
-               end if
-            endif
+            call gen_random(idLength, c_file_id)
+            call mpas_c_to_f_string(c_file_id, f_file_id)
+            call mpas_writeStreamAtt(stream % stream, 'file_id', f_file_id, syncVal=.true., ierr=local_ierr)
+            if (local_ierr /= MPAS_STREAM_NOERR) then
+                ierr = MPAS_STREAM_MGR_ERROR
+                return
+            end if
 
             !
             ! Write output_interval to stream
             !
             IF (stream %filename_interval(1:4) /= "none") THEN
                 call mpas_set_timeInterval(filename_interval, timeString=stream %filename_interval)
-                if(mpas_checkStreamAtt(stream%stream, 'output_interval', ierr=local_ierr)) then
-                   call mpas_get_timeInterval(filename_interval,M=output_interval)
-                   call mpas_writeStreamAtt(stream%stream, 'output_interval',output_interval,syncVal=.true., ierr=local_ierr)
-                   if (local_ierr /= MPAS_STREAM_NOERR) then
-                      ierr = MPAS_STREAM_MGR_ERROR
-                      return
-                   end if
+                call mpas_get_timeInterval(filename_interval,M=output_interval)
+                call mpas_writeStreamAtt(stream%stream, 'output_interval',output_interval,syncVal=.true., ierr=local_ierr)
+                if (local_ierr /= MPAS_STREAM_NOERR) then
+                    ierr = MPAS_STREAM_MGR_ERROR
+                    return
                 end if
             END IF
 

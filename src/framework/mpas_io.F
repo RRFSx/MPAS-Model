@@ -6,7 +6,7 @@
 ! distributed with this code, or at http://mpas-dev.github.com/license.html
 !
 module mpas_io
-#define STREAM_DEBUG_WRITE(M) ! call mpas_log_write(M)
+
    use mpas_derived_types
    use mpas_attlist
    use mpas_dmpar
@@ -88,9 +88,6 @@ module mpas_io
 #ifdef MPAS_SMIOL_SUPPORT
    integer, private :: io_global_err = SMIOL_SUCCESS
 #endif
-
-   public :: MPAS_io_has_att
-   public :: MPAS_io_field_is_defined
 
    interface MPAS_io_get_var
       module procedure MPAS_io_get_var_int0d
@@ -3051,36 +3048,6 @@ module mpas_io
    end function MPAS_io_would_clobber_records
 
 
-   logical function MPAS_io_field_is_defined(handle, fieldname, ierr)
-      implicit none
-      type (MPAS_IO_Handle_type), intent(inout) :: handle
-      character (len=*), intent(in) :: fieldname
-      integer, intent(out), optional :: ierr
-      type (fieldlist_type), pointer :: field_cursor
-
-      MPAS_io_field_is_defined = .true.
-
-      ! An uninitialized handle has no defined fields.
-      if (.not. handle % initialized) then
-         if (present(ierr)) ierr = MPAS_IO_ERR_UNINIT_HANDLE
-         MPAS_io_field_is_defined = .false.
-         return 
-      end if
-
-      !
-      ! Check whether the field has been defined
-      !
-      field_cursor => handle % fieldlist_head
-      do while (associated(field_cursor))
-         if (trim(fieldname) == trim(field_cursor % fieldhandle % fieldname)) then
-            exit
-         end if
-         field_cursor => field_cursor % next
-      end do
-      MPAS_io_field_is_defined = associated(field_cursor)
-    end function MPAS_io_field_is_defined
-
-
    subroutine MPAS_io_put_var_generic(handle, fieldname, intVal, intArray1d, intArray2d, intArray3d, intArray4d, &
                                                         realVal, realArray1d, realArray2d, realArray3d, realArray4d, realArray5d, &
                                                         charVal, charArray1d, ierr)
@@ -4321,100 +4288,6 @@ module mpas_io
 
    end subroutine MPAS_io_put_var_char1d
 
-
-   subroutine MPAS_io_has_att(handle, attName, fieldname,  ierr) ! ierr = 0 means it has the attribute
-
-      implicit none
-
-      type (MPAS_IO_Handle_type), intent(inout) :: handle
-      character (len=*), intent(in) :: attName
-      character (len=*), intent(in), optional :: fieldname
-      integer, intent(out), optional :: ierr
-
-      integer :: pio_ierr
-      integer :: local_ierr
-      integer :: varid
-      integer :: xtype
-#ifdef USE_PIO2
-      integer (kind=MPAS_IO_OFFSET_KIND) :: len
-#else
-      integer :: len
-#endif
-      type (fieldlist_type), pointer :: field_cursor
-      type (attlist_type), pointer :: att_cursor, new_att_node
-
-      STREAM_DEBUG_WRITE('Is attribute "' // trim(attName) // '" defined?')
-
-
-!      call mpas_log_write('Called MPAS_io_get_att_int0d()')
-      if (present(ierr)) ierr = MPAS_IO_NOERR
-
-      ! Sanity checks
-      if (.not. handle % initialized) then
-         if (present(ierr)) ierr = MPAS_IO_ERR_UNINIT_HANDLE
-         return 
-      end if
-
-
-      !
-      ! For variable attributes, find the structure for fieldname
-      !
-      if (present(fieldname)) then
-         field_cursor => handle % fieldlist_head
-         do while (associated(field_cursor))
-            if (trim(fieldname) == trim(field_cursor % fieldhandle % fieldname)) then
-               varid = field_cursor % fieldhandle % fieldid
-               exit
-            end if
-            field_cursor => field_cursor % next
-         end do
-         if (.not. associated(field_cursor)) then
-            if (present(ierr)) ierr = MPAS_IO_ERR_UNDEFINED_VAR
-            return
-         end if
-
-      else
-
-#ifdef MPAS_PIO_SUPPORT
-         varid = PIO_global
-#endif
-      end if
-
-      ! Query attribute value
-#ifdef MPAS_PIO_SUPPORT
-      pio_ierr = PIO_inq_att(handle % pio_file, varid, attName, xtype, len)
-      if(pio_ierr == -43) then ! PIO_ENOTATT = NC_ENOTATT = -43
-         STREAM_DEBUG_WRITE('Attribute "' // trim(attName) // '" is undefined (pio_err = -43).')
-         ierr = MPAS_IO_ERR_UNDEFINED_VAR
-         return
-      elseif(pio_ierr /= PIO_NOERR) then
-         STREAM_DEBUG_WRITE('Attribute "' // trim(attName) // '" error.')
-         ierr = MPAS_IO_ERR_BACKEND
-      end if
-#endif
-
-#ifdef MPAS_SMIOL_SUPPORT
-      if (present(fieldname)) then
-         local_ierr = SMIOLf_inquire_att(handle % smiol_file, trim(fieldname), trim(attName), attValue)
-      else
-         local_ierr = SMIOLf_inquire_att(handle % smiol_file, '', trim(attName), attValue)
-      end if
-      if (local_ierr /= SMIOL_SUCCESS) then
-         if (local_ierr == SMIOL_WRONG_ARG_TYPE) then
-            if (present(ierr)) ierr = MPAS_IO_ERR_WRONG_ATT_TYPE
-            return
-         else
-            io_global_err = local_ierr
-            if (present(ierr)) ierr = MPAS_IO_ERR_BACKEND
-            return
-         end if
-      end if
-#endif
-
-      ierr = 0
-      STREAM_DEBUG_WRITE('Attribute "' // trim(attName) // '" is DEFINED!')
-
-   end subroutine MPAS_io_has_att
 
    subroutine MPAS_io_get_att_int0d(handle, attName, attValue, fieldname, ierr)
 
