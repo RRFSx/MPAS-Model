@@ -5972,7 +5972,7 @@ subroutine stream_mgr_create_stream_c(manager_c, streamID_c, direction_c, filena
     type (MPAS_streamManager_type), pointer :: manager
     character(len=StrKIND) :: streamID, filename, filename_interval, reference_time, record_interval
     integer :: direction, immutable, prec, ierr
-    integer :: clobber_mode, iotype
+    integer :: clobber_mode, iotype, gattr_update
 
     call c_f_pointer(manager_c, manager)
     call mpas_c_to_f_string(streamID_c, streamID)
