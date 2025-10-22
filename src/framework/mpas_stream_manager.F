@@ -4300,20 +4300,18 @@ module mpas_stream_manager
                 return
             end if
 
-            if (stream % gattr_update == MPAS_STREAM_GATTR_UPDATE_YES) then
-                !
-                ! Write output_interval to stream
-                !
-                IF (stream %filename_interval(1:4) /= "none") THEN
-                    call mpas_set_timeInterval(filename_interval, timeString=stream %filename_interval)
-                    call mpas_get_timeInterval(filename_interval,M=output_interval)
-                    call mpas_writeStreamAtt(stream%stream, 'output_interval',output_interval,syncVal=.true., ierr=local_ierr)
-                    if (local_ierr /= MPAS_STREAM_NOERR) then
-                        ierr = MPAS_STREAM_MGR_ERROR
-                        return
-                    end if
-                END IF
-            end if
+            !
+            ! Write output_interval to stream
+            !
+            IF (stream %filename_interval(1:4) /= "none") THEN
+                call mpas_set_timeInterval(filename_interval, timeString=stream %filename_interval)
+                call mpas_get_timeInterval(filename_interval,M=output_interval)
+                call mpas_writeStreamAtt(stream%stream, 'output_interval',output_interval,syncVal=.true., ierr=local_ierr)
+                if (local_ierr /= MPAS_STREAM_NOERR) then
+                    ierr = MPAS_STREAM_MGR_ERROR
+                    return
+                end if
+            END IF
 
         end if
 
