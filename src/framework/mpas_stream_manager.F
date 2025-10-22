@@ -4256,7 +4256,7 @@ module mpas_stream_manager
         integer :: output_interval
         type (MPAS_timeInterval_type) :: filename_interval
 
-        if (direction == MPAS_STREAM_OUTPUT) then
+        if (direction == MPAS_STREAM_OUTPUT .and. stream % gattr_update == MPAS_STREAM_GATTR_UPDATE_YES) then
 
             !
             ! Write attributes to stream
