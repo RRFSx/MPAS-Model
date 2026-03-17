@@ -153,9 +153,13 @@ if(NOT EXISTS ${ATMOSPHERE_CORE_PHYSICS_MMM_DIR})
     # Checkout a specific tag or commit
     execute_process(COMMAND git checkout ${PHYSICS_MMM_REF}
                     WORKING_DIRECTORY ${ATMOSPHERE_CORE_PHYSICS_MMM_DIR}
-                    RESULT_VARIABLE GIT_CHECKOUT_RESULT)
+                    RESULT_VARIABLE GIT_CHECKOUT_RESULT
+                    OUTPUT_VARIABLE GIT_CHECKOUT_OUTPUT
+                    ERROR_VARIABLE GIT_CHECKOUT_ERROR)
     if(NOT GIT_CHECKOUT_RESULT EQUAL 0)
-        message(WARNING "Failed to checkout ${PHYSICS_MMM_REF}, using default branch")
+        message(WARNING
+                "Failed to checkout ${PHYSICS_MMM_REF}, using default branch. "
+                "git error: ${GIT_CHECKOUT_ERROR}")
     endif()
 else()
     message(STATUS "Directory ${ATMOSPHERE_CORE_PHYSICS_MMM_DIR} already exists, skipping clone")
@@ -192,9 +196,13 @@ if(NOT EXISTS ${ATMOSPHERE_CORE_PHYSICS_UGWP_DIR})
     # Checkout a specific tag or commit
     execute_process(COMMAND git checkout ${PHYSICS_UGWP_REF}
                     WORKING_DIRECTORY ${ATMOSPHERE_CORE_PHYSICS_UGWP_DIR}
-                    RESULT_VARIABLE GIT_CHECKOUT_RESULT)
+                    RESULT_VARIABLE GIT_CHECKOUT_RESULT
+                    OUTPUT_VARIABLE GIT_CHECKOUT_OUTPUT
+                    ERROR_VARIABLE GIT_CHECKOUT_ERROR)
     if(NOT GIT_CHECKOUT_RESULT EQUAL 0)
-        message(WARNING "Failed to checkout ${PHYSICS_UGWP_REF}, using default branch")
+        message(WARNING
+                "Failed to checkout ${PHYSICS_UGWP_REF} (exit code ${GIT_CHECKOUT_RESULT}); "
+                "stdout: ${GIT_CHECKOUT_OUTPUT}; stderr: ${GIT_CHECKOUT_ERROR}. Using default branch.")
     endif()
 else()
     message(STATUS "Directory ${ATMOSPHERE_CORE_PHYSICS_UGWP_DIR} already exists, skipping clone")
