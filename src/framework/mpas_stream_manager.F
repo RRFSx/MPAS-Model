@@ -1796,6 +1796,9 @@ module mpas_stream_manager
                   case (MPAS_STREAM_PROPERTY_IOTYPE)
                       stream_cursor % io_type = propertyValue
 
+                  case (MPAS_STREAM_PROPERTY_DONE_MARKER)
+                      stream_cursor % output_done_marker = propertyValue
+
                   case default
                       STREAM_ERROR_WRITE('MPAS_stream_mgr_set_property(): No such property $i' COMMA intArgs=(/propertyName/))
                       STREAM_ERROR_WRITE('    or specified property is not of type integer.')
@@ -3499,6 +3502,11 @@ module mpas_stream_manager
 
            if ( swapRecords ) then
                stream % nRecords = tempRecord
+           end if
+
+           ! Write done marker file if enabled for this stream
+           if (stream % output_done_marker == 1) then
+               call write_done_marker(stream % filename, manager % ioContext % dminfo, stream % blockWrite)
            end if
         end if
 
@@ -6991,7 +6999,7 @@ subroutine stream_mgr_set_property_c(manager_c, streamID_c, propertyName_c, prop
     use mpas_c_interfacing, only : mpas_c_to_f_string
     use iso_c_binding, only : c_char, c_int, c_ptr, c_f_pointer
     use mpas_derived_types, only : MPAS_streamManager_type, MPAS_STREAM_MGR_NOERR, &
-                                   MPAS_STREAM_PROPERTY_OUTPUT_TIMELEVELS
+                                   MPAS_STREAM_PROPERTY_OUTPUT_TIMELEVELS, MPAS_STREAM_PROPERTY_DONE_MARKER
     use mpas_stream_manager, only : MPAS_stream_mgr_set_property
     use mpas_kind_types, only : StrKIND
 
@@ -7018,6 +7026,8 @@ subroutine stream_mgr_set_property_c(manager_c, streamID_c, propertyName_c, prop
     ! Map property name string to constant
     if (trim(propertyName) == 'output_timelevels') then
         call MPAS_stream_mgr_set_property(manager, streamID, MPAS_STREAM_PROPERTY_OUTPUT_TIMELEVELS, propertyValue, ierr=ierr)
+    else if (trim(propertyName) == 'output_done_marker') then
+        call MPAS_stream_mgr_set_property(manager, streamID, MPAS_STREAM_PROPERTY_DONE_MARKER, 1, ierr=ierr)
     end if
 
     if (ierr == MPAS_STREAM_MGR_NOERR) then
@@ -7131,3 +7141,45 @@ subroutine stream_mgr_add_variable_output_alarm_c(manager_c, streamID_c, ierr_c)
     end if
 
 end subroutine stream_mgr_add_variable_output_alarm_c !}}}
+
+
+!|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+!
+!  subroutine write_done_marker
+!
+!> \brief Write an empty marker file to indicate output file completion
+!> \author Guoqing Ge
+!> \date March 2026  
+!> \details
+!>  Creates an empty file with .done extension after output file is closed.
+!>  Only called if output_done_marker property is true for the stream.
+!>  For normal parallel I/O (blockWrite=false), only rank 0 (IO_NODE) writes
+!>  the marker since all ranks write to the same file.
+!>  For blockWrite mode, each rank writes its own file, so each rank creates
+!>  its own marker file.
+!
+!-----------------------------------------------------------------------
+subroutine write_done_marker(filename, dminfo, blockWrite)!{{{
+
+    use mpas_derived_types, only : dm_info
+    use mpas_dmpar, only : IO_NODE
+
+    implicit none
+
+    character(len=*), intent(in) :: filename
+    type (dm_info), intent(in) :: dminfo
+    logical, intent(in) :: blockWrite
+
+    character(len=1024) :: marker_filename
+    integer :: unit_num
+
+    ! For blockWrite mode, each rank writes its own file so each creates marker
+    ! For normal parallel I/O, all ranks write same file so only rank 0 creates marker
+    if (blockWrite .or. dminfo % my_proc_id == IO_NODE) then
+        marker_filename = trim(filename) // '.done'
+        unit_num = 99
+        open(unit=unit_num, file=trim(marker_filename), status='replace', action='write')
+        close(unit_num)
+    end if
+
+end subroutine write_done_marker!}}}
