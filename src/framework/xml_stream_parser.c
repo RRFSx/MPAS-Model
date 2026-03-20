@@ -1111,6 +1111,7 @@ void xml_stream_parser(char *fname, void *manager, int *mpi_comm, int *status)
 	/* First, handle changes to immutable stream filename templates, intervals, etc. */
 	immutable = 1;
 	for (stream_xml = ezxml_child(streams, "immutable_stream"); stream_xml; stream_xml = ezxml_next(stream_xml)) {
+		const char *output_done_marker;
 		streamID = ezxml_attr(stream_xml, "name");
 		direction = ezxml_attr(stream_xml, "type");
 		filename_template = ezxml_attr(stream_xml, "filename_template");
@@ -1126,6 +1127,7 @@ void xml_stream_parser(char *fname, void *manager, int *mpi_comm, int *status)
 		clobber = ezxml_attr(stream_xml, "clobber_mode");
 		gattr_update = ezxml_attr(stream_xml, "gattr_update");
 		iotype = ezxml_attr(stream_xml, "io_type");
+		output_done_marker = ezxml_attr(stream_xml, "output_done_marker");
 
 		/* Extract the input interval, if it refer to other streams */
 		if ( interval_in ) {
@@ -1374,6 +1376,17 @@ void xml_stream_parser(char *fname, void *manager, int *mpi_comm, int *status)
 			return;
 		}
 
+		/* If output_done_marker is specified, set it as a property */
+		if (output_done_marker != NULL && strstr(output_done_marker, "yes") != NULL) {
+			stream_mgr_set_property_c(manager, streamID, "output_done_marker", "1", &err);
+			if (err != 0) {
+				*status = 1;
+				return;
+			}
+			snprintf(msgbuf, MSGSIZE, "        %-20s%s", "output done marker:", "yes");
+			mpas_log_write_c(msgbuf, "MPAS_LOG_OUT");
+		}
+
 		/* Possibly add an input alarm for this stream */
 		if (itype == 3 || itype == 1) {
 			stream_mgr_add_alarm_c(manager, streamID, "input", "start", interval_in2, &err);
@@ -1442,6 +1455,7 @@ void xml_stream_parser(char *fname, void *manager, int *mpi_comm, int *status)
 	immutable = 0;
 	for (stream_xml = ezxml_child(streams, "stream"); stream_xml; stream_xml = ezxml_next(stream_xml)) {
 		const char *output_timelevels;
+		const char *output_done_marker;
 		streamID = ezxml_attr(stream_xml, "name");
 		direction = ezxml_attr(stream_xml, "type");
 		filename_template = ezxml_attr(stream_xml, "filename_template");
@@ -1458,6 +1472,7 @@ void xml_stream_parser(char *fname, void *manager, int *mpi_comm, int *status)
 		clobber = ezxml_attr(stream_xml, "clobber_mode");
 		gattr_update = ezxml_attr(stream_xml, "gattr_update");
 		iotype = ezxml_attr(stream_xml, "io_type");
+		output_done_marker = ezxml_attr(stream_xml, "output_done_marker");
 
 		/* Extract the input interval, if it refer to other streams */
 		if ( interval_in ) {
@@ -1720,6 +1735,17 @@ void xml_stream_parser(char *fname, void *manager, int *mpi_comm, int *status)
 				return;
 			}
 			snprintf(msgbuf, MSGSIZE, "        %-20s%s", "output timelevels:", output_timelevels);
+			mpas_log_write_c(msgbuf, "MPAS_LOG_OUT");
+		}
+
+		/* If output_done_marker is specified, set it as a property */
+		if (output_done_marker != NULL && strstr(output_done_marker, "yes") != NULL) {
+			stream_mgr_set_property_c(manager, streamID, "output_done_marker", "1", &err);
+			if (err != 0) {
+				*status = 1;
+				return;
+			}
+			snprintf(msgbuf, MSGSIZE, "        %-20s%s", "output done marker:", "yes");
 			mpas_log_write_c(msgbuf, "MPAS_LOG_OUT");
 		}
 
