@@ -6069,6 +6069,13 @@ module mpas_stream_manager
         call mpas_split_string(trim(adjustl(timelevels_str)), ' ', segments)
         n_segments = size(segments)
 
+        ! Debug: show what segments were created
+        call mpas_log_write('DEBUG: output_timelevels split into $i segments', MPAS_LOG_WARN, intArgs=(/n_segments/))
+        do i = 1, n_segments
+            call mpas_log_write('  Segment $i: '''//trim(segments(i))//''' (len=$i)', &
+                               MPAS_LOG_WARN, intArgs=(/i, len_trim(segments(i))/))
+        end do
+
         ! Check for too many segments
         if (n_segments > MAX_TIMELEVEL_SEGMENTS) then
             call mpas_log_write('Stream '''//trim(stream_name)//''': too many timelevel segments (max $i)', &
@@ -6090,6 +6097,7 @@ module mpas_stream_manager
             if (local_ierr /= 0) then
                 call mpas_log_write('Stream '''//trim(stream_name)//''': Invalid timelevel format. ' // &
                                    'Expected ''start-end-interval'' but got '''//trim(segment)//'''', MPAS_LOG_ERR)
+                call mpas_log_write('  DEBUG: total segments=$i, failed at segment $i', MPAS_LOG_ERR, intArgs=(/n_segments, i/))
                 deallocate(segments)
                 ierr = 1
                 return
@@ -6100,6 +6108,10 @@ module mpas_stream_manager
             timelevel_spec % start_hour(timelevel_spec % n_segments) = start_hour
             timelevel_spec % end_hour(timelevel_spec % n_segments) = end_hour
             timelevel_spec % interval_minutes(timelevel_spec % n_segments) = interval_mins
+            
+            ! Debug output
+            call mpas_log_write('  DEBUG: Parsed segment $i: '''//trim(segment)//''' -> start=$r h, end=$r h, interval=$r min', &
+                               MPAS_LOG_WARN, intArgs=(/i/), realArgs=(/start_hour, end_hour, interval_mins/))
         end do
 
         deallocate(segments)
