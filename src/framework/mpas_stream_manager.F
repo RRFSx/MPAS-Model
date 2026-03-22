@@ -7205,6 +7205,8 @@ subroutine write_done_marker(filename, dminfo, blockWrite)!{{{
     logical, intent(in) :: blockWrite
 
     character(len=1024) :: marker_filename
+    character(len=8) :: date_str
+    character(len=10) :: time_str
     integer :: unit_num
 
     ! For blockWrite mode, each rank writes its own file so each creates marker
@@ -7212,7 +7214,11 @@ subroutine write_done_marker(filename, dminfo, blockWrite)!{{{
     if (blockWrite .or. dminfo % my_proc_id == IO_NODE) then
         marker_filename = trim(filename) // '.done'
         unit_num = 99
+        call date_and_time(date=date_str, time=time_str)
         open(unit=unit_num, file=trim(marker_filename), status='replace', action='write')
+        ! Write timestamp: YYYY-MM-DD HH:MM:SS
+        write(unit_num, '(A)') date_str(1:4)//'-'//date_str(5:6)//'-'//date_str(7:8)//' '// &
+                               time_str(1:2)//':'//time_str(3:4)//':'//time_str(5:6)
         close(unit_num)
     end if
 
