@@ -6064,9 +6064,9 @@ module mpas_stream_manager
             return
         end if
 
-        ! Split the string by spaces
+        ! Split the string by spaces (trim leading/trailing whitespaces first)
         nullify(segments)
-        call mpas_split_string(timelevels_str, ' ', segments)
+        call mpas_split_string(trim(adjustl(timelevels_str)), ' ', segments)
         n_segments = size(segments)
 
         ! Check for too many segments
