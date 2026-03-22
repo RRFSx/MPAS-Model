@@ -812,8 +812,6 @@ module mpas_timekeeping
 
    logical function mpas_is_alarm_ringing(clock, alarmID, interval, ierr)
 
-      use mpas_log, only : mpas_log_write
-
       implicit none
 
       type (MPAS_Clock_type), intent(in) :: clock
@@ -885,7 +883,6 @@ module mpas_timekeeping
       
       type (MPAS_Time_type) :: alarmNow
       type (MPAS_Time_type) :: alarmThreshold
-      integer :: tmp_err
 
       alarmNow = mpas_get_clock_time(clock, MPAS_NOW, ierr)
       alarmThreshold = alarmPtr % ringTime 
