@@ -1510,9 +1510,14 @@ module mpas_stream_manager
                         alarm_cursor => stream % alarmList_out % head
                         do while (associated(alarm_cursor))
                             if (mpas_is_alarm_ringing(manager % streamClock, alarm_cursor % name, ierr=local_ierr)) then
-                                call mpas_reset_clock_alarm(manager % streamClock, alarm_cursor % name, ierr=local_ierr)
-                                ! Update variable output alarms with new interval based on forecast hour
-                                call update_variable_output_alarm(manager, stream, alarm_cursor % name, ierr=local_ierr)
+                                ! For variable output streams, update_variable_output_alarm handles everything
+                                ! (removes old alarm, adds new one with correct timing)
+                                ! For regular streams, just reset the alarm
+                                if (stream % timelevel_spec % is_parsed) then
+                                    call update_variable_output_alarm(manager, stream, alarm_cursor % name, ierr=local_ierr)
+                                else
+                                    call mpas_reset_clock_alarm(manager % streamClock, alarm_cursor % name, ierr=local_ierr)
+                                end if
                             end if
                             alarm_cursor => alarm_cursor % next
                         end do
@@ -1541,13 +1546,24 @@ module mpas_stream_manager
                     alarm_cursor => manager % alarms_out % head
                     do while (associated(alarm_cursor))
                         if (mpas_is_alarm_ringing(manager % streamClock, alarm_cursor % name, ierr=local_ierr)) then
-                            call mpas_reset_clock_alarm(manager % streamClock, alarm_cursor % name, ierr=local_ierr)
-                            ! Update variable output alarms for each stream associated with this alarm
+                            ! Check if ANY associated stream uses variable output
+                            ! If so, update_variable_output_alarm handles removal/recreation
+                            ! Otherwise, use standard reset
+                            resetAlarms = .false.  ! Reuse this flag to track if any variable stream handled it
                             stream_cursor => alarm_cursor % streamList % head
                             do while (associated(stream_cursor))
-                                call update_variable_output_alarm(manager, stream_cursor, alarm_cursor % name, ierr=local_ierr)
+                                ! stream_cursor % xref points to the actual stream
+                                if (stream_cursor % xref % timelevel_spec % is_parsed) then
+                                    call update_variable_output_alarm(manager, stream_cursor % xref, alarm_cursor % name, ierr=local_ierr)
+                                    resetAlarms = .true.  ! A variable stream handled it
+                                end if
                                 stream_cursor => stream_cursor % next
                             end do
+                            ! For non-variable streams, reset the alarm normally
+                            ! But ONLY if no variable stream already handled it
+                            if (.not. resetAlarms) then
+                                call mpas_reset_clock_alarm(manager % streamClock, alarm_cursor % name, ierr=local_ierr)
+                            end if
                         end if
                         alarm_cursor => alarm_cursor % next
                     end do
@@ -6573,7 +6589,7 @@ module mpas_stream_manager
             if (next_start_hour > 0.0_RKIND) then
                 call mpas_log_write('DEBUG update_variable_output_alarm: scheduling next at $r h', &
                                     MPAS_LOG_WARN, realArgs=(/next_start_hour/))
-                ! Schedule alarm for when the next range starts
+                ! Schedule recurring alarm for when the next range starts
                 call mpas_set_timeInterval(time_diff, dt=next_start_hour * 3600.0_RKIND, ierr=ierr_tmp)
                 alarmTime_local = start_time + time_diff
                 call mpas_set_timeInterval(alarmInterval_local, dt=next_interval_minutes * 60.0_RKIND, ierr=ierr_tmp)
