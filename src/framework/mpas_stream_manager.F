@@ -1643,6 +1643,7 @@ module mpas_stream_manager
                end if
                do while (associated(alarm_cursor))
                    if (mpas_is_alarm_ringing(manager % streamClock, alarm_cursor % name, ierr=local_ierr)) then
+                       call mpas_log_write('DEBUG ringing_alarms: ALARM RINGING: '//trim(alarm_cursor % name), MPAS_LOG_WARN)
                        MPAS_stream_mgr_ringing_alarms = .true.
                        return
                    end if
@@ -6592,8 +6593,10 @@ module mpas_stream_manager
         local_ierr = ior(local_ierr, ierr_tmp)
 
         call mpas_log_write('DEBUG update_variable_output_alarm: alarm_name='//trim(alarm_name), MPAS_LOG_WARN)
-        call mpas_log_write('DEBUG update_variable_output_alarm: forecast_hour=$r, interval_min=$r', &
-                            MPAS_LOG_WARN, realArgs=(/forecast_hour, interval_minutes/))
+        call mpas_log_write('DEBUG update_variable_output_alarm: forecast_hour=$r h', &
+                            MPAS_LOG_WARN, realArgs=(/forecast_hour/))
+        call mpas_log_write('DEBUG update_variable_output_alarm: interval_minutes=$r min (=$r sec)', &
+                            MPAS_LOG_WARN, realArgs=(/interval_minutes, interval_minutes * 60.0_RKIND/))
 
         ! Remove old alarm
         call mpas_remove_clock_alarm(manager % streamClock, alarm_name, ierr=ierr_tmp)
@@ -6604,6 +6607,8 @@ module mpas_stream_manager
         ! Add new alarm with updated interval
         ! Set alarm time to current_time + interval so next ring is in the future
         alarmTime_local = current_time + alarmInterval_local
+        call mpas_log_write('DEBUG update_variable_output_alarm: next alarm in $r min from now', &
+                            MPAS_LOG_WARN, realArgs=(/interval_minutes/))
         call mpas_add_clock_alarm(manager % streamClock, alarm_name, alarmTime_local, &
                                  alarmTimeInterval=alarmInterval_local, ierr=ierr_tmp)
         call mpas_log_write('DEBUG update_variable_output_alarm: mpas_add_clock_alarm ierr=$i', &
