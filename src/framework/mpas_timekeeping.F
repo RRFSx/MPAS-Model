@@ -822,17 +822,14 @@ module mpas_timekeeping
       integer, intent(out), optional :: ierr
 
       type (MPAS_Alarm_type), pointer :: alarmPtr
-      logical :: alarm_found
 
       if (present(ierr)) ierr = 0
 
       mpas_is_alarm_ringing = .false.
-      alarm_found = .false.
       
       alarmPtr => clock % alarmListHead
       do while (associated(alarmPtr))
          if (trim(alarmPtr % alarmID) == trim(alarmID)) then
-            alarm_found = .true.
             if (alarmPtr % isSet) then
                if (mpas_in_ringing_envelope(clock, alarmPtr, interval, ierr)) then
                   mpas_is_alarm_ringing = .true.
@@ -842,11 +839,6 @@ module mpas_timekeeping
          end if
          alarmPtr => alarmPtr % next
       end do
-
-      ! Debug: show if variable output alarm was not found
-      if (index(alarmID, '_output') > 0 .and. .not. alarm_found) then
-         call mpas_log_write('DEBUG mpas_is_alarm_ringing: ALARM NOT FOUND: '//trim(alarmID))
-      end if
 
    end function mpas_is_alarm_ringing
 
@@ -884,8 +876,6 @@ module mpas_timekeeping
 
    logical function mpas_in_ringing_envelope(clock, alarmPtr, interval, ierr)
 
-      use mpas_log, only : mpas_log_write
-
       implicit none
       
       type (MPAS_Clock_type), intent(in) :: clock
@@ -895,8 +885,6 @@ module mpas_timekeeping
       
       type (MPAS_Time_type) :: alarmNow
       type (MPAS_Time_type) :: alarmThreshold
-      type (MPAS_TimeInterval_type) :: now_interval, threshold_interval
-      integer (kind=I8KIND) :: now_seconds, threshold_seconds
       integer :: tmp_err
 
       alarmNow = mpas_get_clock_time(clock, MPAS_NOW, ierr)
@@ -916,20 +904,6 @@ module mpas_timekeeping
 
          if (alarmThreshold <= alarmNow) then
             mpas_in_ringing_envelope = .true.
-         end if
-
-         ! Debug: show comparison for variable output alarms (containing "_output")
-         if (index(alarmPtr % alarmID, '_output') > 0) then
-            now_interval = alarmNow - mpas_get_clock_time(clock, MPAS_START_TIME, tmp_err)
-            threshold_interval = alarmThreshold - mpas_get_clock_time(clock, MPAS_START_TIME, tmp_err)
-            call mpas_get_timeInterval(now_interval, S_i8=now_seconds, ierr=tmp_err)
-            call mpas_get_timeInterval(threshold_interval, S_i8=threshold_seconds, ierr=tmp_err)
-            call mpas_log_write('DEBUG in_ringing_envelope: alarm='//trim(alarmPtr % alarmID)// &
-                               ', isRecurring=$l, isSet=$l', &
-                               logicArgs=(/alarmPtr % isRecurring, alarmPtr % isSet/))
-            call mpas_log_write('DEBUG in_ringing_envelope:   now=$i s, threshold=$i s, ringing=$l', &
-                               intArgs=(/int(now_seconds), int(threshold_seconds)/), &
-                               logicArgs=(/mpas_in_ringing_envelope/))
          end if
       else
 

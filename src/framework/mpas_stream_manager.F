@@ -1659,7 +1659,6 @@ module mpas_stream_manager
                end if
                do while (associated(alarm_cursor))
                    if (mpas_is_alarm_ringing(manager % streamClock, alarm_cursor % name, ierr=local_ierr)) then
-                       call mpas_log_write('DEBUG ringing_alarms: ALARM RINGING: '//trim(alarm_cursor % name), MPAS_LOG_WARN)
                        MPAS_stream_mgr_ringing_alarms = .true.
                        return
                    end if
@@ -6086,13 +6085,6 @@ module mpas_stream_manager
         call mpas_split_string(trim(adjustl(timelevels_str)), ' ', segments)
         n_segments = size(segments)
 
-        ! Debug: show what segments were created
-        call mpas_log_write('DEBUG: output_timelevels split into $i segments', MPAS_LOG_WARN, intArgs=(/n_segments/))
-        do i = 1, n_segments
-            call mpas_log_write('  Segment $i: '''//trim(segments(i))//''' (len=$i)', &
-                               MPAS_LOG_WARN, intArgs=(/i, len_trim(segments(i))/))
-        end do
-
         ! Check for too many segments
         if (n_segments > MAX_TIMELEVEL_SEGMENTS) then
             call mpas_log_write('Stream '''//trim(stream_name)//''': too many timelevel segments (max $i)', &
@@ -6114,7 +6106,6 @@ module mpas_stream_manager
             if (local_ierr /= 0) then
                 call mpas_log_write('Stream '''//trim(stream_name)//''': Invalid timelevel format. ' // &
                                    'Expected ''start-end-interval'' but got '''//trim(segment)//'''', MPAS_LOG_ERR)
-                call mpas_log_write('  DEBUG: total segments=$i, failed at segment $i', MPAS_LOG_ERR, intArgs=(/n_segments, i/))
                 deallocate(segments)
                 ierr = 1
                 return
@@ -6125,10 +6116,6 @@ module mpas_stream_manager
             timelevel_spec % start_hour(timelevel_spec % n_segments) = start_hour
             timelevel_spec % end_hour(timelevel_spec % n_segments) = end_hour
             timelevel_spec % interval_minutes(timelevel_spec % n_segments) = interval_mins
-            
-            ! Debug output
-            call mpas_log_write('  DEBUG: Parsed segment $i: '''//trim(segment)//''' -> start=$r h, end=$r h, interval=$r min', &
-                               MPAS_LOG_WARN, intArgs=(/i/), realArgs=(/start_hour, end_hour, interval_mins/))
         end do
 
         deallocate(segments)
@@ -6397,8 +6384,6 @@ module mpas_stream_manager
         is_single_time = .false.
         next_hour = huge(1.0_RKIND)
 
-        call mpas_log_write('DEBUG get_output_interval: Called with forecast_hour=$r h', MPAS_LOG_WARN, realArgs=(/forecast_hour/))
-
         ! Guard against unparsed spec
         if (.not. timelevel_spec % is_parsed .or. timelevel_spec % n_segments == 0) then
             ierr = 1
@@ -6414,13 +6399,11 @@ module mpas_stream_manager
             ! Check if current forecast hour falls in this range
             if (forecast_hour >= start_hour .and. forecast_hour <= end_hour) then
                 found = .true.
-                call mpas_log_write('  Matched segment $i: start=$r, end=$r', MPAS_LOG_WARN, intArgs=(/i/), realArgs=(/start_hour, end_hour/))
                 ! Check if this is a single time point (not a range)
                 if (abs(start_hour - end_hour) < 1.0e-6_RKIND) then
                     is_single_time = .true.
                 else
                     ! It's a range - use the segment's interval
-                    call mpas_log_write('  -> Range mode: interval=$r min', MPAS_LOG_WARN, realArgs=(/seg_interval/))
                     interval_minutes = seg_interval
                     return
                 end if
@@ -6454,14 +6437,12 @@ module mpas_stream_manager
                 ! No more times after this - interval_minutes = 0 signals last output
                 interval_minutes = 0.0_RKIND
                 if (present(next_output_hour)) next_output_hour = -1.0_RKIND
-                call mpas_log_write('  -> No more times, interval=0', MPAS_LOG_WARN)
             end if
             return
         end if
 
         ! If no matching range found, signal that no more output is needed
         if (.not. found) then
-            call mpas_log_write('  -> No matching segment found, no more output', MPAS_LOG_WARN)
             interval_minutes = 0.0_RKIND
             ierr = MPAS_STREAM_MGR_ERROR  ! Signal no more output
         end if
@@ -6582,27 +6563,16 @@ module mpas_stream_manager
         call get_output_interval_from_timelevels(stream % timelevel_spec, forecast_hour, interval_minutes, ierr_tmp, next_output_hour)
         if (ierr_tmp /= MPAS_STREAM_MGR_NOERR .or. interval_minutes <= 0.0_RKIND) then
             ! Current hour not in any range - check for future range
-            call mpas_log_write('DEBUG update_variable_output_alarm: NO MATCH at forecast_hour=$r', &
-                                MPAS_LOG_WARN, realArgs=(/forecast_hour/))
-            call mpas_log_write('DEBUG update_variable_output_alarm: alarm_name='//trim(alarm_name), MPAS_LOG_WARN)
             call get_next_timelevel_start(stream % timelevel_spec, forecast_hour, next_start_hour, next_interval_minutes, ierr_tmp)
             call mpas_remove_clock_alarm(manager % streamClock, alarm_name, ierr=ierr_tmp)
-            call mpas_log_write('DEBUG update_variable_output_alarm: (no match) remove ierr=$i', &
-                                MPAS_LOG_WARN, intArgs=(/ierr_tmp/))
             
             if (next_start_hour > 0.0_RKIND) then
-                call mpas_log_write('DEBUG update_variable_output_alarm: scheduling next at $r h', &
-                                    MPAS_LOG_WARN, realArgs=(/next_start_hour/))
                 ! Schedule recurring alarm for when the next range starts
                 call mpas_set_timeInterval(time_diff, dt=next_start_hour * 3600.0_RKIND, ierr=ierr_tmp)
                 alarmTime_local = start_time + time_diff
                 call mpas_set_timeInterval(alarmInterval_local, dt=next_interval_minutes * 60.0_RKIND, ierr=ierr_tmp)
                 call mpas_add_clock_alarm(manager % streamClock, alarm_name, alarmTime_local, &
                                          alarmTimeInterval=alarmInterval_local, ierr=ierr_tmp)
-                call mpas_log_write('DEBUG update_variable_output_alarm: (no match) add ierr=$i', &
-                                    MPAS_LOG_WARN, intArgs=(/ierr_tmp/))
-            else
-                call mpas_log_write('DEBUG update_variable_output_alarm: no more outputs scheduled', MPAS_LOG_WARN)
             end if
             if (present(ierr)) ierr = MPAS_STREAM_MGR_NOERR
             return
@@ -6612,16 +6582,8 @@ module mpas_stream_manager
         call mpas_set_timeInterval(alarmInterval_local, dt=interval_minutes * 60.0_RKIND, ierr=ierr_tmp)
         local_ierr = ior(local_ierr, ierr_tmp)
 
-        call mpas_log_write('DEBUG update_variable_output_alarm: alarm_name='//trim(alarm_name), MPAS_LOG_WARN)
-        call mpas_log_write('DEBUG update_variable_output_alarm: forecast_hour=$r h', &
-                            MPAS_LOG_WARN, realArgs=(/forecast_hour/))
-        call mpas_log_write('DEBUG update_variable_output_alarm: interval_minutes=$r min (=$r sec)', &
-                            MPAS_LOG_WARN, realArgs=(/interval_minutes, interval_minutes * 60.0_RKIND/))
-
         ! Remove old alarm
         call mpas_remove_clock_alarm(manager % streamClock, alarm_name, ierr=ierr_tmp)
-        call mpas_log_write('DEBUG update_variable_output_alarm: mpas_remove_clock_alarm ierr=$i', &
-                            MPAS_LOG_WARN, intArgs=(/ierr_tmp/))
         local_ierr = ior(local_ierr, ierr_tmp)
 
         ! Add new alarm with updated interval
@@ -6637,8 +6599,6 @@ module mpas_stream_manager
         end if
         call mpas_add_clock_alarm(manager % streamClock, alarm_name, alarmTime_local, &
                                  alarmTimeInterval=alarmInterval_local, ierr=ierr_tmp)
-        call mpas_log_write('DEBUG update_variable_output_alarm: mpas_add_clock_alarm ierr=$i', &
-                            MPAS_LOG_WARN, intArgs=(/ierr_tmp/))
         local_ierr = ior(local_ierr, ierr_tmp)
 
         if (present(ierr)) ierr = local_ierr
