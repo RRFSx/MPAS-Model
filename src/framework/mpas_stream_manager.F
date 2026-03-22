@@ -6561,16 +6561,27 @@ module mpas_stream_manager
         call get_output_interval_from_timelevels(stream % timelevel_spec, forecast_hour, interval_minutes, ierr_tmp)
         if (ierr_tmp /= MPAS_STREAM_MGR_NOERR .or. interval_minutes <= 0.0_RKIND) then
             ! Current hour not in any range - check for future range
+            call mpas_log_write('DEBUG update_variable_output_alarm: NO MATCH at forecast_hour=$r', &
+                                MPAS_LOG_WARN, realArgs=(/forecast_hour/))
+            call mpas_log_write('DEBUG update_variable_output_alarm: alarm_name='//trim(alarm_name), MPAS_LOG_WARN)
             call get_next_timelevel_start(stream % timelevel_spec, forecast_hour, next_start_hour, next_interval_minutes, ierr_tmp)
             call mpas_remove_clock_alarm(manager % streamClock, alarm_name, ierr=ierr_tmp)
+            call mpas_log_write('DEBUG update_variable_output_alarm: (no match) remove ierr=$i', &
+                                MPAS_LOG_WARN, intArgs=(/ierr_tmp/))
             
             if (next_start_hour > 0.0_RKIND) then
+                call mpas_log_write('DEBUG update_variable_output_alarm: scheduling next at $r h', &
+                                    MPAS_LOG_WARN, realArgs=(/next_start_hour/))
                 ! Schedule alarm for when the next range starts
                 call mpas_set_timeInterval(time_diff, dt=next_start_hour * 3600.0_RKIND, ierr=ierr_tmp)
                 alarmTime_local = start_time + time_diff
                 call mpas_set_timeInterval(alarmInterval_local, dt=next_interval_minutes * 60.0_RKIND, ierr=ierr_tmp)
                 call mpas_add_clock_alarm(manager % streamClock, alarm_name, alarmTime_local, &
                                          alarmTimeInterval=alarmInterval_local, ierr=ierr_tmp)
+                call mpas_log_write('DEBUG update_variable_output_alarm: (no match) add ierr=$i', &
+                                    MPAS_LOG_WARN, intArgs=(/ierr_tmp/))
+            else
+                call mpas_log_write('DEBUG update_variable_output_alarm: no more outputs scheduled', MPAS_LOG_WARN)
             end if
             if (present(ierr)) ierr = MPAS_STREAM_MGR_NOERR
             return
@@ -6580,8 +6591,14 @@ module mpas_stream_manager
         call mpas_set_timeInterval(alarmInterval_local, dt=interval_minutes * 60.0_RKIND, ierr=ierr_tmp)
         local_ierr = ior(local_ierr, ierr_tmp)
 
+        call mpas_log_write('DEBUG update_variable_output_alarm: alarm_name='//trim(alarm_name), MPAS_LOG_WARN)
+        call mpas_log_write('DEBUG update_variable_output_alarm: forecast_hour=$r, interval_min=$r', &
+                            MPAS_LOG_WARN, realArgs=(/forecast_hour, interval_minutes/))
+
         ! Remove old alarm
         call mpas_remove_clock_alarm(manager % streamClock, alarm_name, ierr=ierr_tmp)
+        call mpas_log_write('DEBUG update_variable_output_alarm: mpas_remove_clock_alarm ierr=$i', &
+                            MPAS_LOG_WARN, intArgs=(/ierr_tmp/))
         local_ierr = ior(local_ierr, ierr_tmp)
 
         ! Add new alarm with updated interval
@@ -6589,6 +6606,8 @@ module mpas_stream_manager
         alarmTime_local = current_time + alarmInterval_local
         call mpas_add_clock_alarm(manager % streamClock, alarm_name, alarmTime_local, &
                                  alarmTimeInterval=alarmInterval_local, ierr=ierr_tmp)
+        call mpas_log_write('DEBUG update_variable_output_alarm: mpas_add_clock_alarm ierr=$i', &
+                            MPAS_LOG_WARN, intArgs=(/ierr_tmp/))
         local_ierr = ior(local_ierr, ierr_tmp)
 
         if (present(ierr)) ierr = local_ierr
