@@ -6230,60 +6230,58 @@ module mpas_stream_manager
         real(kind=RKIND), intent(out) :: interval_minutes
         integer, intent(out) :: ierr
 
-        character(len=StrKIND) :: spec_local
-        integer :: i, dash_count, dash_pos(2), len_spec
+        character(len=StrKIND), pointer, dimension(:) :: parts
+        integer :: i, n_parts, local_ierr
         real(kind=RKIND) :: start_minutes, end_minutes, step_minutes
-        integer :: local_ierr
 
         ierr = 0
-        dash_pos(1) = 0
-        dash_pos(2) = 0
-        spec_local = trim(adjustl(spec))
-        len_spec = len_trim(spec_local)
 
         ! Guard against empty string
-        if (len_spec == 0) then
+        if (len_trim(spec) == 0) then
             ierr = 1
             return
         end if
 
-        ! Count dashes to determine format
-        dash_count = 0
-        do i = 1, len_spec
-            if (spec_local(i:i) == '-') then
-                dash_count = dash_count + 1
-                if (dash_count <= 2) dash_pos(dash_count) = i
+        ! Split by dash delimiter
+        nullify(parts)
+        call mpas_split_string(trim(adjustl(spec)), '-', parts)
+        n_parts = size(parts)
+
+        ! Validate parts array - check for empty parts (from consecutive dashes or leading/trailing dashes)
+        do i = 1, n_parts
+            if (len_trim(parts(i)) == 0) then
+                ierr = 1
+                deallocate(parts)
+                return
             end if
         end do
 
-        ! Parse based on number of dashes
-        if (dash_count == 0) then
+        ! Parse based on number of parts
+        if (n_parts == 1) then
             ! Format: single time string (output at that time only)
-            call parse_time_string(spec_local, start_minutes, local_ierr)
+            call parse_time_string(parts(1), start_minutes, local_ierr)
             if (local_ierr /= 0) then
                 ierr = 1
+                deallocate(parts)
                 return
             end if
             start_hour = start_minutes / 60.0_RKIND
             end_hour = start_hour
             interval_minutes = 60.0_RKIND  ! Default, but won't matter for single time
 
-        else if (dash_count == 1) then
+        else if (n_parts == 2) then
             ! Format: start-stop (interval defaults to 1 hour)
-            if (dash_pos(1) <= 1 .or. dash_pos(1) >= len_spec) then
+            call parse_time_string(parts(1), start_minutes, local_ierr)
+            if (local_ierr /= 0) then
                 ierr = 1
+                deallocate(parts)
                 return
             end if
             
-            call parse_time_string(spec_local(1:dash_pos(1)-1), start_minutes, local_ierr)
+            call parse_time_string(parts(2), end_minutes, local_ierr)
             if (local_ierr /= 0) then
                 ierr = 1
-                return
-            end if
-            
-            call parse_time_string(spec_local(dash_pos(1)+1:len_spec), end_minutes, local_ierr)
-            if (local_ierr /= 0) then
-                ierr = 1
+                deallocate(parts)
                 return
             end if
             
@@ -6291,28 +6289,26 @@ module mpas_stream_manager
             end_hour = end_minutes / 60.0_RKIND
             interval_minutes = 60.0_RKIND
 
-        else if (dash_count == 2) then
+        else if (n_parts == 3) then
             ! Format: start-stop-step
-            if (dash_pos(1) <= 1 .or. dash_pos(2) <= dash_pos(1) + 1 .or. dash_pos(2) >= len_spec) then
+            call parse_time_string(parts(1), start_minutes, local_ierr)
+            if (local_ierr /= 0) then
                 ierr = 1
+                deallocate(parts)
                 return
             end if
             
-            call parse_time_string(spec_local(1:dash_pos(1)-1), start_minutes, local_ierr)
+            call parse_time_string(parts(2), end_minutes, local_ierr)
             if (local_ierr /= 0) then
                 ierr = 1
+                deallocate(parts)
                 return
             end if
             
-            call parse_time_string(spec_local(dash_pos(1)+1:dash_pos(2)-1), end_minutes, local_ierr)
+            call parse_time_string(parts(3), step_minutes, local_ierr)
             if (local_ierr /= 0) then
                 ierr = 1
-                return
-            end if
-            
-            call parse_time_string(spec_local(dash_pos(2)+1:len_spec), step_minutes, local_ierr)
-            if (local_ierr /= 0) then
-                ierr = 1
+                deallocate(parts)
                 return
             end if
             
@@ -6321,9 +6317,18 @@ module mpas_stream_manager
             interval_minutes = step_minutes
 
         else
-            ! More than 2 dashes - invalid format
+            ! Invalid number of parts (0 or > 3 dashes)
             ierr = 1
+            deallocate(parts)
             return
+        end if
+
+        deallocate(parts)
+
+        ! Check for setting mistake "start-step-stop". The correct one should be "start-stop-step"
+        if ((n_parts == 3) .and. (interval_minutes > end_hour * 60.0_RKIND + 1.0e-4_RKIND)) then
+            call mpas_log_write('ERROR: output_timelevels segment '''//trim(spec)//''': ' // &
+                               'expected format is start-stop-step, but appears to be start-step-stop', MPAS_LOG_ERR)
         end if
 
     end subroutine parse_output_timelevel_spec!}}}
