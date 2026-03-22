@@ -6378,6 +6378,8 @@ module mpas_stream_manager
         is_single_time = .false.
         min_next_time = huge(1.0_RKIND)
 
+        call mpas_log_write('DEBUG get_output_interval: Called with forecast_hour=$r h', MPAS_LOG_WARN, realArgs=(/forecast_hour/))
+
         ! Guard against unparsed spec
         if (.not. timelevel_spec % is_parsed .or. timelevel_spec % n_segments == 0) then
             ierr = 1
@@ -6393,11 +6395,13 @@ module mpas_stream_manager
             ! Check if current forecast hour falls in this range
             if (forecast_hour >= start_hour .and. forecast_hour <= end_hour) then
                 found = .true.
+                call mpas_log_write('  Matched segment $i: start=$r, end=$r', MPAS_LOG_WARN, intArgs=(/i/), realArgs=(/start_hour, end_hour/))
                 ! Check if this is a single time point (not a range)
                 if (abs(start_hour - end_hour) < 1.0e-6_RKIND) then
                     is_single_time = .true.
                 else
                     ! It's a range - use the segment's interval
+                    call mpas_log_write('  -> Range mode: interval=$r min', MPAS_LOG_WARN, realArgs=(/seg_interval/))
                     interval_minutes = seg_interval
                     return
                 end if
@@ -6426,15 +6430,18 @@ module mpas_stream_manager
             ! Calculate interval to next time
             if (min_next_time < huge(1.0_RKIND)) then
                 interval_minutes = (min_next_time - forecast_hour) * 60.0_RKIND
+                call mpas_log_write('  -> Next time: $r h, interval=$r min', MPAS_LOG_WARN, realArgs=(/min_next_time, interval_minutes/))
             else
                 ! No more times after this - interval_minutes = 0 signals last output
                 interval_minutes = 0.0_RKIND
+                call mpas_log_write('  -> No more times, interval=0', MPAS_LOG_WARN)
             end if
             return
         end if
 
         ! If no matching range found, signal that no more output is needed
         if (.not. found) then
+            call mpas_log_write('  -> No matching segment found, no more output', MPAS_LOG_WARN)
             interval_minutes = 0.0_RKIND
             ierr = MPAS_STREAM_MGR_ERROR  ! Signal no more output
         end if
