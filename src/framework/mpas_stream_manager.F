@@ -6375,7 +6375,7 @@ module mpas_stream_manager
     !>  appropriate output interval in minutes.
     !
     !-----------------------------------------------------------------------
-    subroutine get_output_interval_from_timelevels(timelevel_spec, forecast_hour, interval_minutes, ierr)!{{{
+    subroutine get_output_interval_from_timelevels(timelevel_spec, forecast_hour, interval_minutes, ierr, next_output_hour)!{{{
 
         implicit none
 
@@ -6383,17 +6383,19 @@ module mpas_stream_manager
         real(kind=RKIND), intent(in) :: forecast_hour
         real(kind=RKIND), intent(out) :: interval_minutes
         integer, intent(out) :: ierr
+        real(kind=RKIND), intent(out), optional :: next_output_hour
 
         integer :: i
         real(kind=RKIND) :: start_hour, end_hour, seg_interval
-        real(kind=RKIND) :: min_next_time
+        real(kind=RKIND) :: next_hour
         logical :: found, is_single_time
 
         ierr = 0
         interval_minutes = 60.0_RKIND  ! Default to 1 hour
+        if (present(next_output_hour)) next_output_hour = -1.0_RKIND
         found = .false.
         is_single_time = .false.
-        min_next_time = huge(1.0_RKIND)
+        next_hour = huge(1.0_RKIND)
 
         call mpas_log_write('DEBUG get_output_interval: Called with forecast_hour=$r h', MPAS_LOG_WARN, realArgs=(/forecast_hour/))
 
@@ -6433,24 +6435,25 @@ module mpas_stream_manager
 
                 ! For single times, check if > current
                 if (abs(start_hour - end_hour) < 1.0e-6_RKIND) then
-                    if (start_hour > forecast_hour + 1.0e-6_RKIND .and. start_hour < min_next_time) then
-                        min_next_time = start_hour
+                    if (start_hour > forecast_hour + 1.0e-6_RKIND .and. start_hour < next_hour) then
+                        next_hour = start_hour
                     end if
                 else
                     ! For ranges, check if start is after current
-                    if (start_hour > forecast_hour + 1.0e-6_RKIND .and. start_hour < min_next_time) then
-                        min_next_time = start_hour
+                    if (start_hour > forecast_hour + 1.0e-6_RKIND .and. start_hour < next_hour) then
+                        next_hour = start_hour
                     end if
                 end if
             end do
 
             ! Calculate interval to next time
-            if (min_next_time < huge(1.0_RKIND)) then
-                interval_minutes = (min_next_time - forecast_hour) * 60.0_RKIND
-                call mpas_log_write('  -> Next time: $r h, interval=$r min', MPAS_LOG_WARN, realArgs=(/min_next_time, interval_minutes/))
+            if (next_hour < huge(1.0_RKIND)) then
+                interval_minutes = (next_hour - forecast_hour) * 60.0_RKIND
+                if (present(next_output_hour)) next_output_hour = next_hour
             else
                 ! No more times after this - interval_minutes = 0 signals last output
                 interval_minutes = 0.0_RKIND
+                if (present(next_output_hour)) next_output_hour = -1.0_RKIND
                 call mpas_log_write('  -> No more times, interval=0', MPAS_LOG_WARN)
             end if
             return
@@ -6553,7 +6556,7 @@ module mpas_stream_manager
 
         type (MPAS_Time_type) :: start_time, current_time, alarmTime_local
         type (MPAS_TimeInterval_type) :: time_diff, alarmInterval_local
-        real (kind=RKIND) :: forecast_hour, next_start_hour
+        real (kind=RKIND) :: forecast_hour, next_start_hour, next_output_hour
         real (kind=RKIND) :: interval_minutes, next_interval_minutes
         integer :: local_ierr, ierr_tmp
         integer (kind=I8KIND) :: seconds_diff
@@ -6575,7 +6578,8 @@ module mpas_stream_manager
         forecast_hour = real(seconds_diff, RKIND) / 3600.0_RKIND
 
         ! Get next interval using pre-parsed timelevel_spec
-        call get_output_interval_from_timelevels(stream % timelevel_spec, forecast_hour, interval_minutes, ierr_tmp)
+        ! Also get the absolute next output hour to avoid floating-point drift
+        call get_output_interval_from_timelevels(stream % timelevel_spec, forecast_hour, interval_minutes, ierr_tmp, next_output_hour)
         if (ierr_tmp /= MPAS_STREAM_MGR_NOERR .or. interval_minutes <= 0.0_RKIND) then
             ! Current hour not in any range - check for future range
             call mpas_log_write('DEBUG update_variable_output_alarm: NO MATCH at forecast_hour=$r', &
@@ -6621,10 +6625,16 @@ module mpas_stream_manager
         local_ierr = ior(local_ierr, ierr_tmp)
 
         ! Add new alarm with updated interval
-        ! Set alarm time to current_time + interval so next ring is in the future
-        alarmTime_local = current_time + alarmInterval_local
-        call mpas_log_write('DEBUG update_variable_output_alarm: next alarm in $r min from now', &
-                            MPAS_LOG_WARN, realArgs=(/interval_minutes/))
+        ! Use ABSOLUTE time from start_time to avoid floating-point drift
+        ! This ensures discrete times like "0m 15m 1h3m 2 3" hit exactly
+        if (next_output_hour > 0.0_RKIND) then
+            ! Compute alarm time absolutely: start_time + next_output_hour
+            call mpas_set_timeInterval(time_diff, dt=next_output_hour * 3600.0_RKIND, ierr=ierr_tmp)
+            alarmTime_local = start_time + time_diff
+        else
+            ! Fallback to relative calculation (for ranges)
+            alarmTime_local = current_time + alarmInterval_local
+        end if
         call mpas_add_clock_alarm(manager % streamClock, alarm_name, alarmTime_local, &
                                  alarmTimeInterval=alarmInterval_local, ierr=ierr_tmp)
         call mpas_log_write('DEBUG update_variable_output_alarm: mpas_add_clock_alarm ierr=$i', &
