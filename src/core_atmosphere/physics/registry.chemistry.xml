@@ -192,6 +192,10 @@
             units="-"
             description="Flag that controls artificially enhancing the PBL exhange coefs"
             possbile_values=".true. or .false."/>
+       <nml_option name="do_mp_aero_emission" type="logical" default_value="false" in_defaults="false"
+            units="-"
+            description="Flag that controls aerosol emissions for Tempo microphysics"
+            possbile_values=".true. or .false."/>
    </nml_record>
 
 <!-- **************************************************************************************** -->
