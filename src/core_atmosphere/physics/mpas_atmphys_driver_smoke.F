@@ -151,10 +151,8 @@
     if(.not.allocated(clayfrac_in_p))        allocate(clayfrac_in_p(ims:ime,jms:jme))
     if(.not.allocated(sandfrac_in_p))        allocate(sandfrac_in_p(ims:ime,jms:jme))
     if(.not.allocated(uthres_in_p))          allocate(uthres_in_p(ims:ime,jms:jme))
-    if(.not.allocated(uthres_sg_in_p))       allocate(uthres_sg_in_p(ims:ime,jms:jme))
-    if(.not.allocated(albedo_drag_p))        allocate(albedo_drag_p(ims:ime,jms:jme))
-    if(.not.allocated(sep_in_p))             allocate(sep_in_p(ims:ime,jms:jme))
-    if(.not.allocated(feff_p))               allocate(feff_p(ims:ime,jms:jme))
+    if(.not.allocated(rdrag_p))              allocate(rdrag_p(ims:ime,jms:jme))
+    if(.not.allocated(ssm_in_p))             allocate(ssm_in_p(ims:ime,jms:jme))
  endif
 
  if ( wetdep_ls_opt .ne. 0 ) then
@@ -267,10 +265,8 @@
  if(allocated(clayfrac_in_p)    )     deallocate(clayfrac_in_p    )
  if(allocated(sandfrac_in_p)    )     deallocate(sandfrac_in_p    )
  if(allocated(uthres_in_p)      )     deallocate(uthres_in_p      )
- if(allocated(uthres_sg_in_p)   )     deallocate(uthres_sg_in_p   )
- if(allocated(albedo_drag_p)    )     deallocate(albedo_drag_p    )
- if(allocated(feff_p)           )     deallocate(feff_p           )
- if(allocated(sep_in_p)         )     deallocate(sep_in_p         )
+ if(allocated(rdrag_p)          )     deallocate(rdrag_p          )
+ if(allocated(ssm_in_p)         )     deallocate(ssm_in_p         )
 
  if(allocated(ddvel_p)          )     deallocate(ddvel_p          )
  if(allocated(wetdep_resolved_p))     deallocate(wetdep_resolved_p)
@@ -340,8 +336,8 @@
       integer,dimension(:),pointer               :: eco_id
       real(kind=RKIND),dimension(:),pointer      :: hfx_bb, qfx_bb, frac_grid_burned
       integer,dimension(:),pointer               :: min_bb_plume, max_bb_plume
-      real(kind=RKIND),dimension(:),pointer      :: sandfrac_in, clayfrac_in, uthres_in, uthres_sg_in, &
-                                                    sep_in, albedo_drag,feff
+      real(kind=RKIND),dimension(:),pointer      :: sandfrac_in, clayfrac_in, uthres_in, &
+                                                    ssm_in, rdrag
       real(kind=RKIND),dimension(:),pointer      :: RWC_denominator
       real(kind=RKIND),dimension(:,:), pointer   :: RWC_annual_sum, RWC_annual_sum_smoke_fine, &
                                                     RWC_annual_sum_smoke_coarse,RWC_annual_sum_unspc_fine, &
@@ -442,10 +438,8 @@
          call mpas_pool_get_array(diag_physics, 'clayfrac_in',clayfrac_in)
          call mpas_pool_get_array(diag_physics, 'sandfrac_in',sandfrac_in)
          call mpas_pool_get_array(diag_physics, 'uthres_in',uthres_in)
-         call mpas_pool_get_array(diag_physics, 'uthres_sg_in',uthres_sg_in)
-         call mpas_pool_get_array(diag_physics, 'albedo_drag',albedo_drag) ! these have been updated to select
-         call mpas_pool_get_array(diag_physics, 'feff',feff)               ! the correct month
-         call mpas_pool_get_array(diag_physics, 'sep_in',sep_in)
+         call mpas_pool_get_array(diag_physics, 'rdrag',rdrag) ! these have been updated to select
+         call mpas_pool_get_array(diag_physics, 'ssm_in',ssm_in)
       endif
 
       if (config_smoke_scheme .ne. 'off' .and. num_e_bb_in .gt. 0 ) then
@@ -726,10 +720,8 @@
             sandfrac_in_p(i,j)    = sandfrac_in(i)
             clayfrac_in_p(i,j)    = clayfrac_in(i)
             uthres_in_p(i,j)      = uthres_in(i)
-            uthres_sg_in_p(i,j)   = uthres_sg_in(i)
-            albedo_drag_p(i,j)    = albedo_drag(i)
-            feff_p(i,j)           = feff(i)
-            sep_in_p(i,j)         = sep_in(i)
+            rdrag_p(i,j)          = rdrag(i)
+            ssm_in_p(i,j)         = ssm_in(i)
         enddo
         enddo
       endif
@@ -1097,7 +1089,7 @@
  logical,pointer                :: calc_bb_emis_online
  logical,pointer                :: add_fire_heat_flux
  logical,pointer                :: add_fire_moist_flux
- logical,pointer                :: do_mp_aero_emission
+ logical,pointer                :: config_mp_aero_emission
  integer,pointer                :: plumerisefire_frq
  real(kind=RKIND),pointer       :: dust_alpha, dust_gamma
  real(kind=RKIND),pointer       :: dust_drylimit_factor, dust_moist_correction
@@ -1137,7 +1129,7 @@
  call mpas_pool_get_config(configs,'config_rwc_scheme',config_rwc_scheme)
  call mpas_pool_get_config(configs,'rwc_emis_scale_factor',rwc_emis_scale_factor)
 ! Namelist: aerosol emission for tempo mp
- call mpas_pool_get_config(configs,'do_mp_aero_emission',do_mp_aero_emission)
+ call mpas_pool_get_config(configs,'config_mp_aero_emission',config_mp_aero_emission)
 ! Namelist: Wet/dry deposition
  call mpas_pool_get_config(configs,'wetdep_ls_opt',wetdep_ls_opt)
  call mpas_pool_get_config(configs,'wetdep_ls_alpha',wetdep_ls_alpha) 
@@ -1236,10 +1228,9 @@
            frac_grid_burned = frac_grid_burned_p,                                        &
            min_bb_plume   = min_bb_plume_p, max_bb_plume = max_bb_plume_p,               &
            coef_bb_dc     = coef_bb_dc_p, nblocks = nblocks,                             &
-! --- Dust related arrays
+! --- (FENGSHA) Dust related arrays
            sandfrac_in    = sandfrac_in_p, clayfrac_in    = clayfrac_in_p,               &
-           uthres_in      = uthres_in_p,   uthres_sg_in   = uthres_sg_in_p,              &
-           albedo_drag_in = albedo_drag_p, feff_in        = feff_p, sep_in = sep_in_p,   &
+           uthres_in      = uthres_in_p,  rdrag_in = rdrag_p, ssm_in = ssm_in_p,         &
 ! --- Dry/Wet deposition, settling
            wetdep_ls_opt = wetdep_ls_opt,         drydep_flux = drydep_flux_p,           &
            tend_chem_settle = tend_chem_settle_p,       ddvel = ddvel_p,                 &
@@ -1276,14 +1267,14 @@
            v_phy   = v_p         , qv       = qv_p       , vvel     = w_p        ,       &
            qc_vis  = qc_p, qr_vis = qr_p, qi_vis = qi_p, qs_vis = qs_p, qg_vis = qg_p,   &
            blcldw_vis = qcbl_p, blcldi_vis = qibl_p,                                     &
-           coszen = coszr_p      , do_mp_aero_emission = do_mp_aero_emission     ,       &
+           coszen = coszr_p      , config_mp_aero_emission = config_mp_aero_emission,    &
            aod3d_smoke = aod3d_smoke_p, aod3d = aod3d_p, vis    = vis_p          ,       &
            pi_phy  = pi_p        , rho_phy  = rho_p      , kpbl     = kpbl_p     ,       &
            nsoil   = num_soils   , smois    = smois_p    , tslb     = tslb_p     ,       &
            ivgtyp  = ivgtyp_p    , isltyp   = isltyp_p   , nlcat    = num_landcat,       &
            swdown  = swdown_p    , z0       = z0_p       , snowh    = snowh_p    ,       &
            julian  = curr_julday , rmol     = rmol_p     , raincv   = raincv_p   ,       &
-           rainncv = rainncv_p   , dpt2m    = dpt2m_p    , znt      = znt_p      ,       &                              
+           rainncv = rainncv_p   , dpt2m    = dpt2m_p    , znt      = znt_p      ,       &
            mavail  = mavail_p    , g        = gravity    , vegfra   = vegfra_p   ,       &
            landusef = landusef_p , cldfrac  = cldfrac_p  , ktop_deep= ktop_deep_p,       &
            nwfa2d  = nwfa2d_p    , nifa2d   = nifa2d_p   ,                               &
