@@ -42,6 +42,7 @@
  character(len=StrKIND),pointer :: config_dust_scheme
  character(len=StrKIND),pointer :: config_anthro_scheme
  character(len=StrKIND),pointer :: config_rwc_scheme
+ character(len=StrKIND),pointer :: config_microp_scheme
  logical, pointer :: config_tempo_aerosolaware
 
  integer, pointer :: ebb_dcycle
@@ -56,6 +57,7 @@
  call mpas_pool_get_config(configs,'config_dust_scheme', config_dust_scheme)
  call mpas_pool_get_config(configs,'config_anthro_scheme',config_anthro_scheme)
  call mpas_pool_get_config(configs,'config_rwc_scheme',config_rwc_scheme)
+ call mpas_pool_get_config(configs,'config_microp_scheme',config_microp_scheme)
  call mpas_pool_get_config(configs,'config_tempo_aerosolaware',config_tempo_aerosolaware)
 
  call mpas_pool_get_config(configs,'ebb_dcycle', ebb_dcycle)
@@ -192,7 +194,7 @@
     if(.not.allocated(RWC_annual_sum_unspc_coarse_p))   allocate(RWC_annual_sum_unspc_coarse_p(ims:ime,1:kreswoodcomb,jms:jme))
  endif
 
- if (config_tempo_aerosolaware ) then
+ if ((config_microp_scheme .eq. 'mp_tempo') .and. config_tempo_aerosolaware ) then
     if(.not.allocated(nwfa2d_p))            allocate(nwfa2d_p(ims:ime,jms:jme))
     if(.not.allocated(nifa2d_p))            allocate(nifa2d_p(ims:ime,jms:jme))
  endif
@@ -354,6 +356,7 @@
       character(len=StrKIND),pointer :: config_anthro_scheme
       character(len=StrKIND),pointer :: config_rwc_scheme
       character(len=StrKIND),pointer :: config_convection_scheme
+      character(len=StrKIND),pointer :: config_microp_scheme
       logical,pointer:: config_tempo_aerosolaware
       integer, pointer :: wetdep_ls_opt
       integer, pointer :: drydep_opt
@@ -382,6 +385,7 @@
       call mpas_pool_get_config(configs,'wetdep_ls_opt',wetdep_ls_opt)
       call mpas_pool_get_config(configs,'drydep_opt',drydep_opt)
       call mpas_pool_get_config(configs,'config_convection_scheme',config_convection_scheme)
+      call mpas_pool_get_config(configs,'config_microp_scheme',config_microp_scheme)
       call mpas_pool_get_config(configs,'config_tempo_aerosolaware',config_tempo_aerosolaware)
 
       call mpas_pool_get_config(configs,'plumerise_opt',plumerise_opt)
@@ -502,7 +506,7 @@
          call mpas_pool_get_array(diag_physics, 'e_ant_out',e_ant_out)
       endif
 
-      if (config_tempo_aerosolaware ) then
+      if ((config_microp_scheme .eq. 'mp_tempo') .and. config_tempo_aerosolaware ) then
          call mpas_pool_get_array(diag_physics,'nifa2d',nifa2d)
          call mpas_pool_get_array(diag_physics,'nwfa2d',nwfa2d)
       endif
@@ -705,7 +709,7 @@
          rainncv_p(i,j) = rainncv(i)
          dpt2m_p(i,j)   = 280. !dewpoint_surface(i)
          mavail_p(i,j)  = mavail(i)
-         if ( config_tempo_aerosolaware ) then
+         if ((config_microp_scheme .eq. 'mp_tempo') .and. config_tempo_aerosolaware ) then
           nifa2d_p(i,j) = nifa2d(i)
           nwfa2d_p(i,j) = nwfa2d(i)
          endif
@@ -824,6 +828,7 @@
  character(len=StrKIND),pointer :: config_smoke_scheme
  character(len=StrKIND),pointer :: config_dust_scheme
  character(len=StrKIND),pointer :: config_anthro_scheme
+ character(len=StrKIND),pointer :: config_microp_scheme
  logical,pointer:: config_tempo_aerosolaware
  integer, pointer :: wetdep_ls_opt
  integer, pointer :: drydep_opt
@@ -854,6 +859,7 @@
  call mpas_pool_get_config(configs,'config_smoke_scheme', config_smoke_scheme)
  call mpas_pool_get_config(configs,'config_dust_scheme', config_dust_scheme)
  call mpas_pool_get_config(configs,'config_anthro_scheme',config_anthro_scheme)
+ call mpas_pool_get_config(configs,'config_microp_scheme',config_microp_scheme)
  call mpas_pool_get_config(configs,'config_tempo_aerosolaware',config_tempo_aerosolaware)
  call mpas_pool_get_config(configs,'ebb_dcycle', ebb_dcycle)
  call mpas_pool_get_config(configs,'wetdep_ls_opt',wetdep_ls_opt)
@@ -893,7 +899,7 @@
     endif
  endif
 
- if (config_tempo_aerosolaware ) then
+ if ((config_microp_scheme .eq. 'mp_tempo') .and. config_tempo_aerosolaware ) then
     call mpas_pool_get_array(diag_physics,'nifa2d',nifa2d)
     call mpas_pool_get_array(diag_physics,'nwfa2d',nwfa2d)
  endif
@@ -1011,7 +1017,7 @@
                qfx_bb(i)           = qfx_bb_p(i,j)
             endif
          endif
-         if (config_tempo_aerosolaware ) then
+         if ((config_microp_scheme .eq. 'mp_tempo') .and. config_tempo_aerosolaware ) then
              nifa2d(i) = nifa2d_p(i,j)
              nwfa2d(i) = nwfa2d_p(i,j)
          endif
