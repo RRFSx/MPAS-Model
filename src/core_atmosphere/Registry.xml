@@ -404,6 +404,10 @@
                      units="-"
                      description="Whether this run is within the JEDI data assimilation framework; used to add temperature and specific humidity as diagnostics"
                      possible_values=".true. or .false."/>
+                <nml_option name="config_da_update_2mTQ" type="logical" default_value="false"
+                     units="-"
+                     description="Whether to update 2mT and 2mQ between JEDI DA outer loops, set to .true. if using 2mT and 2mQ to compute OMB"
+                     possible_values=".true. or .false."/>
         </nml_record>
 
         <nml_record name="development" in_defaults="false">
