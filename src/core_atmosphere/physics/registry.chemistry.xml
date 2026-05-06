@@ -455,7 +455,7 @@
            description="drag partition (alternate)"
            packages="mpas_dust_in"/>
       <var name="rdrag"           type="real" dimensions="nCells Time" units="-"
-           description="drag partition"
+           description="drag partition for dust emission calculation only"
            packages="mpas_dust_in"/>
       <var name="uthres_in" type="real" dimensions="nCells" units="-"
            description="threshold friction velocity"

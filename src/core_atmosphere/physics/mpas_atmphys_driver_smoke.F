@@ -442,7 +442,7 @@
          call mpas_pool_get_array(diag_physics, 'clayfrac_in',clayfrac_in)
          call mpas_pool_get_array(diag_physics, 'sandfrac_in',sandfrac_in)
          call mpas_pool_get_array(diag_physics, 'uthres_in',uthres_in)
-         call mpas_pool_get_array(diag_physics, 'rdrag',rdrag) ! these have been updated to select
+         call mpas_pool_get_array(diag_physics, 'rdrag',rdrag)
          call mpas_pool_get_array(diag_physics, 'ssm_in',ssm_in)
       endif
 
