@@ -15,7 +15,7 @@ module mpas_stream_manager
     use mpas_stream_list
     use mpas_sort
     use mpas_threading
-    use mpas_string_utils, only : mpas_split_string
+    use mpas_output_timelevels
 
 
     public :: MPAS_stream_mgr_init, &
@@ -1898,7 +1898,7 @@ module mpas_stream_manager
                                if (present(ierr)) ierr = MPAS_STREAM_MGR_ERROR
                            end if
                        else
-                           ! Saft guard: reset timelevel_spec if output_timelevels is somehow cleared
+                            ! Safeguard: reset timelevel_spec if output_timelevels is somehow cleared
                            stream_cursor % timelevel_spec % n_segments = 0
                            stream_cursor % timelevel_spec % is_parsed = .false.
                        end if
@@ -7081,8 +7081,9 @@ subroutine stream_mgr_add_variable_output_alarm_c(manager_c, streamID_c, ierr_c)
                                    MPAS_STREAM_MGR_NOERR, MPAS_STREAM_OUTPUT, MPAS_START_TIME, &
                                    MPAS_STREAM_PROPERTY_REF_TIME, MPAS_stream_list_type
     use mpas_stream_manager, only : MPAS_stream_mgr_get_clock, MPAS_stream_mgr_add_alarm, &
-                                    MPAS_stream_mgr_get_property, get_output_interval_from_timelevels, &
-                                    get_next_timelevel_start
+                                    MPAS_stream_mgr_get_property
+    use mpas_output_timelevels, only : get_output_interval_from_timelevels, &
+                                       get_next_timelevel_start
     use mpas_stream_list, only : MPAS_stream_list_query
     use mpas_kind_types, only : StrKIND, RKIND
     use mpas_timekeeping, only : mpas_add_clock_alarm, mpas_get_clock_time, mpas_set_time, mpas_set_timeInterval, &
@@ -7181,16 +7182,12 @@ end subroutine stream_mgr_add_variable_output_alarm_c !}}}
 !
 !  subroutine write_done_marker
 !
-!> \brief Write an empty marker file to indicate output file completion
+!> \brief Write a done marker file to indicate output file completion
 !> \author Guoqing Ge
 !> \date March 2026  
 !> \details
-!>  Creates an empty file with .done extension after output file is closed.
+!>  Creates a file with .done extension after a successful write completes for the current output file.
 !>  Only called if output_done_marker property is true for the stream.
-!>  For normal parallel I/O (blockWrite=false), only rank 0 (IO_NODE) writes
-!>  the marker since all ranks write to the same file.
-!>  For blockWrite mode, each rank writes its own file, so each rank creates
-!>  its own marker file.
 !
 !-----------------------------------------------------------------------
 subroutine write_done_marker(filename, dminfo, blockWrite)!{{{
@@ -7209,7 +7206,7 @@ subroutine write_done_marker(filename, dminfo, blockWrite)!{{{
     character(len=10) :: time_str
     integer :: unit_num
 
-    ! For blockWrite mode, each rank writes its own file so each creates marker
+    ! For the blockWrite mode, each rank writes its own file so each creates a marker
     ! For normal parallel I/O, all ranks write same file so only rank 0 creates marker
     if (blockWrite .or. dminfo % my_proc_id == IO_NODE) then
         marker_filename = trim(filename) // '.done'
