@@ -432,13 +432,13 @@ module mpas_output_timelevels
                 end_hour = timelevel_spec % end_hour(i)
 
                 ! For single times, check if > current
-                if (abs(start_hour - end_hour) < 1.0e-8_RKIND) then
-                    if (start_hour > forecast_hour + 1.0e-8_RKIND .and. start_hour < next_hour) then
+                if (abs(start_hour - end_hour) < 1.0e-6_RKIND) then
+                    if (start_hour > forecast_hour + 1.0e-6_RKIND .and. start_hour < next_hour) then
                         next_hour = start_hour
                     end if
                 else
                     ! For ranges, check if start is after current
-                    if (start_hour > forecast_hour + 1.0e-8_RKIND .and. start_hour < next_hour) then
+                    if (start_hour > forecast_hour + 1.0e-6_RKIND .and. start_hour < next_hour) then
                         next_hour = start_hour
                     end if
                 end if
@@ -509,7 +509,7 @@ module mpas_output_timelevels
             start_hour = timelevel_spec % start_hour(i)
 
             ! Check if this range starts after current forecast hour
-            if (start_hour > forecast_hour + 1.0e-8_RKIND .and. start_hour < best_start) then
+            if (start_hour > forecast_hour .and. start_hour < best_start) then
                 best_start = start_hour
                 best_interval = timelevel_spec % interval_minutes(i)
                 found = .true.
