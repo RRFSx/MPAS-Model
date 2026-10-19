@@ -4779,7 +4779,7 @@ module init_atm_cases
             do i=1,config_nsm + k
                do iCell=1,nCells
 
-                  sm = sm0(iCell) * min((3.0*zw(k)/zh)**2.0, 1.0_RKIND)
+                  sm = sm0(iCell) * min((3.0*zw(k)/zt)**2.0, 1.0_RKIND)
 
                   hs1(iCell) = 0.
                   do j = 1,nEdgesOnCell(iCell)
